@@ -1,0 +1,67 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cppbuild",
+			"label": "C/C++",
+			"command": "C:/Program Files/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/g++.exe",
+			"args": [
+				"-g",
+				"${file}",
+				//"-D__STDC_FORMAT_MACROS",
+               // "jsoncpp.lib",
+
+
+				"-o",
+				"${fileDirname}/${fileBasenameNoExtension}.exe",
+			//	"-I", "E:/workstation/hkv/include",
+			//			 "-L","E:/workstation/hkv/HCNetSDKCom2",
+						// "-l","E:/workstation/hkv/dll/HCCore.lib",
+			//	"-l","HCCore",
+
+            //     "-l","HCNetSDK",
+
+
+				 "-I","C:/Users/21635/cppx/for_mac/OpenCV-MinGW-Build-OpenCV-4.5.2-x64/include",                 //此处输入opencv所在build/include文件夹，用于编译时导入对应库文件
+				 "-I","C:/Users/21635/cppx/for_mac/OpenCV-MinGW-Build-OpenCV-4.5.2-x64/include/opencv", 
+				// "-I","D:/ConsoleApplication1/jsoncpp-master/include", 
+				 "-I","D:/ffmpeg/ffmpeg-N-104236-g21979cf98e-win64-gpl-shared/include",
+				 "-L","D:/ffmpeg/ffmpeg-N-104236-g21979cf98e-win64-gpl-shared/lib",
+				 "-l","avcodec",
+				 "-l","avdevice",
+				 "-l","avformat",
+				 "-l","avfilter",
+				 "-l","avutil",
+				 "-l","postproc",
+				 "-l","swresample",
+				 "-l","swscale",
+
+
+
+
+
+
+	 			"-L","C:/Users/21635/cppx/for_mac/OpenCV-MinGW-Build-OpenCV-4.5.2-x64/x64/mingw/lib", 
+	 			"-l", "opencv_core452",
+
+                 "-l","opencv_dnn452", 
+				"-l","opencv_imgproc452",
+
+                 "-l","opencv_highgui452", 
+                
+                "-l","opencv_video452"
+			],
+			"options": {
+				"cwd": "${fileDirname}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"detail": "编译器: \"C:/Program Files/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/g++.exe\""
+		}
+	]
+}

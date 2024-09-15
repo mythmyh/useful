@@ -187,7 +187,7 @@ bool muxer::write_frame(const AVFrame* frame)
 		ret = avcodec_receive_packet(codec_ctx_, &pkt);
 		if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
 		{  
-			printf("%d",frame_++);
+			printf("av frame %d\n",frame_++);
 			return true;
 			 }
 		else if (ret < 0) {
