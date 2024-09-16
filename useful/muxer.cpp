@@ -3,7 +3,8 @@
 #include <tuple>
 #include <array>
 #include <vector>
-extern "C" {
+extern "C"
+{
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/opt.h>
@@ -12,17 +13,16 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-
 muxer::muxer()
-	:width_{},
-	height_{},
-	y_size_{},
-	uv_size_{},
-	pts_{},
-	codec_ctx_{ nullptr },
-	fmt_ctx_{ nullptr },
-	out_stream_{ nullptr },
-	yuv_frame_{ nullptr }
+	: width_{},
+	  height_{},
+	  y_size_{},
+	  uv_size_{},
+	  pts_{},
+	  codec_ctx_{nullptr},
+	  fmt_ctx_{nullptr},
+	  out_stream_{nullptr},
+	  yuv_frame_{nullptr}
 {
 }
 
@@ -31,8 +31,7 @@ muxer::~muxer()
 	uninit();
 }
 
-
-bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
+bool muxer::init(int w, int h, int fps, int bit_rate, char *outfile_name)
 {
 	uninit();
 
@@ -41,15 +40,26 @@ bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
 	y_size_ = w * h;
 	uv_size_ = y_size_ / 4;
 
+	char *filename = (char *)"clip2.aac";
+	a_ifmx_ctx = NULL;
+	ret_a = avformat_open_input(&a_ifmx_ctx, filename, NULL, NULL);
+	ret_a = avformat_find_stream_info(a_ifmx_ctx, NULL);
+	audio_idx = av_find_best_stream(a_ifmx_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
+	printf("%d audio index",audio_idx);
+	in_a_stream = a_ifmx_ctx->streams[audio_idx];
+	av_dump_format(a_ifmx_ctx, 1, filename, 0);
+
 	// [1] 创建解码器
-	const AVCodec* encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
-	if (!encoder) {
+	const AVCodec *encoder = avcodec_find_encoder(AV_CODEC_ID_H264);
+	if (!encoder)
+	{
 		fprintf(stderr, "Find encoder AV_CODEC_ID_H264 failed!\n");
 		return false;
 	}
 	// 获取解码器上下文
 	codec_ctx_ = avcodec_alloc_context3(encoder);
-	if (!codec_ctx_) {
+	if (!codec_ctx_)
+	{
 		fprintf(stderr, "Alloc context for encoder contx failed!\n");
 		return false;
 	}
@@ -57,7 +67,7 @@ bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
 	codec_ctx_->bit_rate = bit_rate;
 	codec_ctx_->width = width_;
 	codec_ctx_->height = height_;
-	codec_ctx_->time_base = AVRational{ 1, fps };
+	codec_ctx_->time_base = AVRational{1, fps};
 	codec_ctx_->gop_size = 50;
 	codec_ctx_->max_b_frames = 0;
 	codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -67,11 +77,12 @@ bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
 	codec_ctx_->qcompress = 0.6f;
 	codec_ctx_->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
-	//av_opt_set(codec_ctx_->priv_data, "preset", "ultrafast", 0);
+	// av_opt_set(codec_ctx_->priv_data, "preset", "ultrafast", 0);
 	av_opt_set(codec_ctx_->priv_data, "tune", "zerolatency", 0);
 
 	// 打开解码器
-	if (avcodec_open2(codec_ctx_, encoder, nullptr) < 0) {
+	if (avcodec_open2(codec_ctx_, encoder, nullptr) < 0)
+	{
 		fprintf(stderr, "Open encoder failed!\n");
 		return false;
 	}
@@ -85,6 +96,9 @@ bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
 	out_stream_->codecpar->codec_tag = 0;
 	avcodec_parameters_from_context(out_stream_->codecpar, codec_ctx_);
 
+	out_a_stream = avformat_new_stream(fmt_ctx_, NULL);
+	ret_a = avcodec_parameters_copy(out_a_stream->codecpar, in_a_stream->codecpar);
+
 	av_dump_format(fmt_ctx_, out_stream_->id, outfile_name, 1);
 
 	// 创建YUV格式帧
@@ -93,7 +107,8 @@ bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
 	yuv_frame_->width = width_;
 	yuv_frame_->height = height_;
 	// 为创建的YUV帧分配内存
-	if (av_frame_get_buffer(yuv_frame_, 0) < 0) {
+	if (av_frame_get_buffer(yuv_frame_, 0) < 0)
+	{
 		av_frame_free(&yuv_frame_);
 		yuv_frame_ = nullptr;
 		fprintf(stderr, "Frame get buffer failed!\n");
@@ -101,11 +116,13 @@ bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
 	}
 
 	// [5] 打开输出视频文件并写入视频头信息
-	if (avio_open(&fmt_ctx_->pb, outfile_name, AVIO_FLAG_WRITE) < 0) {
+	if (avio_open(&fmt_ctx_->pb, outfile_name, AVIO_FLAG_WRITE) < 0)
+	{
 		fprintf(stderr, "avio_open  failed!\n");
 		return false;
 	}
-	if (avformat_write_header(fmt_ctx_, nullptr) < 0) {
+	if (avformat_write_header(fmt_ctx_, nullptr) < 0)
+	{
 		fprintf(stderr, "Write header failed!\n");
 		return false;
 	}
@@ -115,20 +132,23 @@ bool muxer::init(int w, int h, int fps, int bit_rate, char* outfile_name)
 
 void muxer::uninit()
 {
-	if (fmt_ctx_) {
+	if (fmt_ctx_)
+	{
 		av_write_trailer(fmt_ctx_);
 		avio_close(fmt_ctx_->pb);
 		avformat_free_context(fmt_ctx_);
 		fmt_ctx_ = nullptr;
 	}
 
-	if (codec_ctx_) {
+	if (codec_ctx_)
+	{
 		avcodec_close(codec_ctx_);
 		avcodec_free_context(&codec_ctx_);
 		codec_ctx_ = nullptr;
 	}
 
-	if (yuv_frame_) {
+	if (yuv_frame_)
+	{
 		av_frame_free(&yuv_frame_);
 		yuv_frame_ = nullptr;
 	}
@@ -140,11 +160,12 @@ void muxer::uninit()
 	pts_ = 0;
 }
 
-bool muxer::write_image(const uint8_t* bgr)
+bool muxer::write_image(const uint8_t *bgr)
 {
 	// 分配YUV格式数据的内存
 	thread_local std::vector<uint8_t> yuv_data;
-	if (yuv_data.size() != y_size_ * 3 / 2) {
+	if (yuv_data.size() != y_size_ * 3 / 2)
+	{
 		yuv_data.resize(y_size_ * 3 / 2);
 	}
 	// BGR格式转YUV格式
@@ -153,15 +174,17 @@ bool muxer::write_image(const uint8_t* bgr)
 	return write_yuv(yuv_data.data());
 }
 
-bool muxer::write_yuv(const uint8_t* yuv_data)
+bool muxer::write_yuv(const uint8_t *yuv_data)
 {
-	//拷贝YUV数据到帧，由于帧数据存在内存对齐，故需逐行拷贝
-	for (int i = 0; i < height_; i++) {
+	// 拷贝YUV数据到帧，由于帧数据存在内存对齐，故需逐行拷贝
+	for (int i = 0; i < height_; i++)
+	{
 		memcpy(yuv_frame_->data[0] + i * yuv_frame_->linesize[0], yuv_data + width_ * i, width_);
 	}
-	
+
 	const int uv_stride = width_ / 2;
-	for (int i = 0; i < height_ / 2; i++) {
+	for (int i = 0; i < height_ / 2; i++)
+	{
 		memcpy(yuv_frame_->data[1] + i * yuv_frame_->linesize[1], yuv_data + y_size_ + uv_stride * i, uv_stride);
 		memcpy(yuv_frame_->data[2] + i * yuv_frame_->linesize[2], yuv_data + y_size_ + uv_size_ + uv_stride * i, uv_stride);
 	}
@@ -171,38 +194,85 @@ bool muxer::write_yuv(const uint8_t* yuv_data)
 	return write_frame(yuv_frame_);
 }
 
-bool muxer::write_frame(const AVFrame* frame)
+bool muxer::write_frame(const AVFrame *frame)
 {
-	char errbuf[64]{ 0 };
+	char errbuf[64]{0};
 	// 将帧数据发送到编码器
 	int ret = avcodec_send_frame(codec_ctx_, frame);
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		fprintf(stderr, "Error sending a frame to the encoder: %s\n", av_make_error_string(errbuf, sizeof(errbuf), ret));
 		return false;
 	}
 
-	while (true) {
-		AVPacket pkt{ 0 };
+	while (true)
+	{
+		AVPacket pkt{0};
 		// 获取编码后的数据
 		ret = avcodec_receive_packet(codec_ctx_, &pkt);
-		if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
-		{  
-			printf("av frame %d\n",frame_++);
+		if (ret == AVERROR(EAGAIN))
+		{
+			printf("av eagain frame %d\n", frame_++);
+			goto write_audio;
+		}
+
+		else if (ret == AVERROR_EOF)
+		{
+			printf("av eof frame %d\n", frame_++);
 			return true;
-			 }
-		else if (ret < 0) {
+		}
+		else if (ret < 0)
+		{
 			fprintf(stderr, "Error encoding a frame: %s\n", av_make_error_string(errbuf, sizeof(errbuf), ret));
 			return false;
 		}
 		// 将pts缩放到输出流的time_base上
 		av_packet_rescale_ts(&pkt, codec_ctx_->time_base, out_stream_->time_base);
 		pkt.stream_index = out_stream_->index;
+		vdts = pkt.dts;
 		// 将数据写入到输出流
 		ret = av_interleaved_write_frame(fmt_ctx_, &pkt);
 		av_packet_unref(&pkt);
-		if (ret < 0) {
+		if (ret < 0)
+		{
 			fprintf(stderr, "Error while writing output packet: %s\n", av_make_error_string(errbuf, sizeof(errbuf), ret));
 			return false;
+		}
+	}
+write_audio:
+	AVPacket apkt{0};
+	int timeline;
+
+	while (1)
+	{
+
+		printf("----------\n");
+
+		ret_a = av_read_frame(a_ifmx_ctx, &apkt);
+
+		if ((ret_a == AVERROR_EOF) || avio_feof(a_ifmx_ctx->pb))
+		{
+
+			printf("audio finished\n");
+		}
+		if (apkt.stream_index == audio_idx)
+		{
+
+			av_packet_rescale_ts(&apkt, in_a_stream->time_base, out_a_stream->time_base);
+
+			apkt.pos = -1;
+			apkt.stream_index = 1;
+			adts = apkt.dts;
+		}
+		timeline = av_compare_ts(vdts, out_stream_->time_base, adts, out_a_stream->time_base);
+
+		av_write_frame(fmt_ctx_, &apkt);
+			av_packet_unref(&apkt);
+
+
+		if (timeline < 0)
+		{
+			return true;
 		}
 	}
 
@@ -214,28 +284,27 @@ bool muxer::flush()
 	return write_frame(nullptr);
 }
 
-bool muxer::bgr_to_yuv420p(const uint8_t* const buf_bgr, uint8_t* const buf_420p)
+bool muxer::bgr_to_yuv420p(const uint8_t *const buf_bgr, uint8_t *const buf_420p)
 {
 	// 分配转换上下文
-	thread_local std::tuple params{ 0, 0, 0 };
-	thread_local std::unique_ptr<SwsContext, decltype(&sws_freeContext)> sws_context{ nullptr, &sws_freeContext };
-	
-	std::tuple new_params{ width_, height_, av_image_get_linesize(AV_PIX_FMT_YUV420P, width_, 0) };
+	thread_local std::tuple params{0, 0, 0};
+	thread_local std::unique_ptr<SwsContext, decltype(&sws_freeContext)> sws_context{nullptr, &sws_freeContext};
+
+	std::tuple new_params{width_, height_, av_image_get_linesize(AV_PIX_FMT_YUV420P, width_, 0)};
 	if (!sws_context || params != new_params)
 	{
 		sws_context.reset(sws_getContext(width_, height_, AV_PIX_FMT_BGR24, width_, height_,
-			AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr));
+										 AV_PIX_FMT_YUV420P, SWS_FAST_BILINEAR, nullptr, nullptr, nullptr));
 		params = new_params;
 	}
 	// 转换格式
-	const int stride = std::get<2>(params);//Y平面一行的数据长度
+	const int stride = std::get<2>(params); // Y平面一行的数据长度
 	const int ret = sws_scale(sws_context.get(),
-		std::array{ buf_bgr }.data(),/* bgr数据只有一个平面 */
-		std::array{ width_ * 3 }.data(),/* BGR所以图像宽度*3 */
-		0, height_,
-		std::array{ buf_420p, buf_420p + y_size_, buf_420p + y_size_ + uv_size_ }.data(),/* YUV三个平面的起始地址 */
-		std::array{ stride, stride / 2, stride / 2 }.data());/* YUV每个平面中一行的宽度 */
+							  std::array{buf_bgr}.data(),	 /* bgr数据只有一个平面 */
+							  std::array{width_ * 3}.data(), /* BGR所以图像宽度*3 */
+							  0, height_,
+							  std::array{buf_420p, buf_420p + y_size_, buf_420p + y_size_ + uv_size_}.data(), /* YUV三个平面的起始地址 */
+							  std::array{stride, stride / 2, stride / 2}.data());							  /* YUV每个平面中一行的宽度 */
 
 	return ret >= 0;
 }
-

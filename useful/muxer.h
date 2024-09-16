@@ -34,5 +34,14 @@ private:
 	AVFormatContext* fmt_ctx_;
 	AVStream* out_stream_;
 	AVFrame* yuv_frame_;
+	AVFormatContext *a_ifmx_ctx;
+	AVStream *in_a_stream;
+	int ret_a;
+	int audio_idx;
+	AVStream *out_a_stream;
+	int64_t adts;
+	int64_t vdts;
+
+
 };
 
